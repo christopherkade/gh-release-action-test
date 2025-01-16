@@ -34,11 +34,16 @@ jobs:
             https://api.github.com/repos/${{ github.repository }}/releases)
           echo "$response" | jq -r '.id'
 
-      - name: Upload release asset
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          release_id=$(curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r '.id')
-          curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/zip" \
-            --data-binary @release.zip \
-            "https://uploads.github.com/repos/${{ github.repository }}/releases/$release_id/assets?name=release.zip"
+          - name: Upload release asset
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          run: |
+            release_id=$(curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r '.id')
+            zip_file="${{ steps.get_version.outputs.VERSION }}-version.zip"
+            if [ -f "$zip_file" ]; then
+              curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/zip" \
+                --data-binary @$zip_file \
+                "https://uploads.github.com/repos/${{ github.repository }}/releases/$release_id/assets?name=$zip_file"
+            else
+              echo "No zip file found with the version number in the name."
+            fi
