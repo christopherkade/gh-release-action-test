@@ -2,23 +2,39 @@ name: Create release
 
 on:
   push:
-    tags:
-      - v*
+    branches:
+      - main
 
 permissions:
   contents: write
 
 jobs:
   release:
-    name: Release pushed tag
+    name: Release pushed branch
     runs-on: ubuntu-22.04
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Create zip file
+        run: zip -r release.zip .
+
       - name: Create release
+        id: create_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref_name }}
         run: |
-          gh release create "$tag" \
-              --repo="$GITHUB_REPOSITORY" \
-              --title="${GITHUB_REPOSITORY#*/} ${tag#v}" \
-              --generate-notes
+          tag=$(date +%Y%m%d%H%M%S)
+          response=$(curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" \
+            -d "{\"tag_name\": \"$tag\", \"target_commitish\": \"main\", \"name\": \"$tag\", \"body\": \"Release for commit $GITHUB_SHA\", \"draft\": false, \"prerelease\": false}" \
+            https://api.github.com/repos/${{ github.repository }}/releases)
+          echo "$response" | jq -r '.id'
+
+      - name: Upload release asset
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          release_id=$(curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r '.id')
+          curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/zip" \
+            --data-binary @release.zip \
+            "https://uploads.github.com/repos/${{ github.repository }}/releases/$release_id/assets?name=release.zip"
