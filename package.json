@@ -1,0 +1,11 @@
+{
+  "name": "gh-release-action-test",
+  "version": "1.0.0",
+  "description": "A test project for GitHub release action",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "Christopher Kade",
+  "license": "MIT"
+}
